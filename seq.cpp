@@ -9,7 +9,6 @@ typedef long state;
 int num_states;
 int alphabet_size;
 int num_final_states;
-vector<state> states;
 state **transition_table;
 vector<state> final_states;
 string input_str;
