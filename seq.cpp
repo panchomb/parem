@@ -15,7 +15,7 @@ string input_str;
 
 void define_automata() {
     state final_state;
-    
+    freopen("afd.txt","r",stdin);
     cin >> num_states >> alphabet_size >> num_final_states;
 
     transition_table = new state*[num_states];
@@ -60,12 +60,13 @@ state rem_parser(state q) {
 
 bool match_re() {
     state final_state = rem_parser(0);
-
-    if (find(final_states.begin(), final_states.end(), final_state) != final_states.end()) {
-        return true;
-    } else {
-        return false;
-    }
+    for(const auto state: final_states) if(final_state == state) return true;
+    return false;
+    // if (find(final_states.begin(), final_states.end(), final_state) != final_states.end()) {
+    //     return true;
+    // } else {
+    //     return false;
+    // }
 }
 
 int main() {
