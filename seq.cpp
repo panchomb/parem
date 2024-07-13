@@ -60,12 +60,13 @@ state rem_parser(state q) {
 
 bool match_re() {
     state final_state = rem_parser(0);
-
-    if (find(final_states.begin(), final_states.end(), final_state) != final_states.end()) {
-        return true;
-    } else {
-        return false;
-    }
+    for(const auto state: final_states) if(final_state == state) return true;
+    return false;
+    // if (find(final_states.begin(), final_states.end(), final_state) != final_states.end()) {
+    //     return true;
+    // } else {
+    //     return false;
+    // }
 }
 
 int main() {
