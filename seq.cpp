@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 
-#include <set>
 #include <math.h>
 #include <omp.h>
 #include <algorithm>
@@ -22,7 +21,7 @@ string input_str;
 
 void define_automata() {
     state final_state;
-    freopen("afd.txt","r",stdin);
+    freopen("dfapaper.txt","r",stdin);
     cin >> num_states >> alphabet_size >> num_final_states;
 
     transition_table = new state*[num_states];
@@ -59,20 +58,6 @@ void read_table(){
 
 }
 
-vector<vector<state>> eliminateDuplicate(const vector<vector<state>>& matriz) {
-    set<vector<state>> filasUnicas;
-    vector<vector<state>> resultado;
-    
-    for (const auto& fila : matriz) {
-        vector<state> filaSinPrimerValor(fila.begin() + 1, fila.end());
-        if (filasUnicas.insert(filaSinPrimerValor).second) {
-            resultado.push_back(fila);
-        }
-    }
-    
-    return resultado;
-}
-
 bool rem_parser() {
     int i = 0;
     state j;
@@ -94,7 +79,7 @@ bool rem_parser() {
             start_position = i*(len_str/NUM_THR);
             end_position = start_position + (len_str/NUM_THR);
             pi_input = input_str.substr(start_position, (len_str/NUM_THR));
-            // cout << pi_input << "  ";
+            cout << pi_input << "  ";
             // cout << start_position << "  "<<omp_get_thread_num() << "\n";
             vector<state> S(num_states,-1);
             for(state j = 0; j < num_states; j++){ // 0 1 2 3 4
@@ -124,11 +109,17 @@ bool rem_parser() {
             sort(S.begin(), S.end());
             sort(L.begin(), L.end());
             set_intersection(S.begin(), S.end(),L.begin(), L.end(),inserter(R, R.begin()));
+
+            // cout << "\n";
+            if(omp_get_thread_num() == 3)
+                for(const auto dat: R) cout << dat << " ";
+
+
             
             for (int r : R){
                 vector<state> Rr;
                 for (const auto charPI: pi_input){
-                    // state* row = transition_table[r];
+                    state* row = transition_table[r];
                     Rr.push_back(r);
                     r = transition_table[r][char_to_int(charPI)];
                 }
@@ -141,14 +132,7 @@ bool rem_parser() {
     }  /* end of parallel section */
 
     cout << "\n";
-    // cout << I.size();
-
-    // reduction I
-    for (size_t i = 0; i < NUM_THR; ++i) {
-        I[i] = eliminateDuplicate(I[i]);
-    }
-
-    // read matrix
+    cout << I.size();
     int thread_id = 0;
     for(const auto thread: I){
         
@@ -160,27 +144,25 @@ bool rem_parser() {
             cout << "\n";
         }
     }
-    //cant parallelize
-    if (len_str >= NUM_THR) return false;
-
-    // bool f_state = 0;
-    // for (auto Rr : I.back())
-    // {
-    //     if (find(final_states.begin(), final_states.end(), Rr.back()) != final_states.end())
-    //     {
-    //         f_state = 1;
-    //         break;
-    //     }
-    // }
-    // if (!f_state)
-    //     return 0;
 
 
-
+    bool f_state = 0;
+    for (auto Rr : I.back())
+    {
+        if (find(final_states.begin(), final_states.end(), Rr.back()) != final_states.end())
+        {
+            f_state = 1;
+            break;
+        }
+    }
+    if (!f_state)
+        return 0;
 
     int cur = I.front().front().back();
+    cout << cur << endl;
+    
     for (int i = 1; i < NUM_THR; i++)
-    {   
+    {
         int start_position, end_position;
         start_position = i*(len_str/NUM_THR);
         end_position = start_position + (len_str/NUM_THR);
