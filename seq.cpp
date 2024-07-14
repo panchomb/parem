@@ -140,6 +140,7 @@ bool rem_parser() {
 
 
     bool f_state = 0;
+    // if theres no final state
     for (auto Rr : I.back())
     {
         if (find(final_states.begin(), final_states.end(), Rr.back()) != final_states.end())
@@ -158,21 +159,19 @@ bool rem_parser() {
         int start_position, end_position;
         start_position = i*(len_str/NUM_THR);
         end_position = start_position + (len_str/NUM_THR);
-        bool f_step = 0;
+        bool flag = 0;
 
         if (I[i].empty())
             return 0;
 
-        for (auto Rr : I[i])
-        {
-            if (cur == Rr.front() && Rr.size() == end_position - start_position + 1)
-            {
-                f_step = 1;
+        for (auto Rr : I[i]) 
+            if (cur == Rr.front() && Rr.size() == end_position - start_position + 1){
+                flag = 1;
                 cur = Rr.back();
                 break;
             }
-        }
-        if (!f_step)
+
+        if (!flag)
             return false;
     }
 
