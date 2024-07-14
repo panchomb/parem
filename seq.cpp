@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+#include <set>
 #include <math.h>
 #include <omp.h>
 #include <algorithm>
@@ -42,10 +43,6 @@ int char_to_int(char c) {
     return (int) c - 'a';
 }
 
-state transition(state q, char c) {
-    state* row = transition_table[q];
-    return row[char_to_int(c)];
-}
 
 void read_table(){
 
@@ -56,6 +53,20 @@ void read_table(){
         cout << endl;
     }
 
+}
+
+vector<vector<state>> eliminateDuplicate(const vector<vector<state>>& matriz) {
+    set<vector<state>> filasUnicas;
+    vector<vector<state>> resultado;
+
+    for (const auto& fila : matriz) {
+        vector<state> filaSinPrimerValor(fila.begin() + 1, fila.end());
+        if (filasUnicas.insert(filaSinPrimerValor).second) {
+            resultado.push_back(fila);
+        }
+    }
+
+    return resultado;
 }
 
 bool rem_parser() {
@@ -71,50 +82,30 @@ bool rem_parser() {
     vector<vector<vector<state>>> I(NUM_THR);
     #pragma omp parallel default(shared) private(i, j, k, pi_input, start_position, ip)
     {
-        //#pragma omp for schedule(dynamic) nowait
-        //#pragma omp for schedule(static,chunk) private(i) nowait
+
         #pragma omp for schedule(static) nowait
         for(int i = 0; i < NUM_THR; i++){
             int start_position, end_position;
             start_position = i*(len_str/NUM_THR);
             end_position = start_position + (len_str/NUM_THR);
             pi_input = input_str.substr(start_position, (len_str/NUM_THR));
-            cout << pi_input << "  ";
-            // cout << start_position << "  "<<omp_get_thread_num() << "\n";
             vector<state> S(num_states,-1);
-            for(state j = 0; j < num_states; j++){ // 0 1 2 3 4
+            for(state j = 0; j < num_states; j++){
                 state* row = transition_table[j];
-                // cout << pi_input.at(0) << " ";
-                // cout << row[char_to_int(pi_input.at(0))] << " ";
                 if (row[char_to_int(pi_input.at(0))] != -1) S[j] = j;
             }
 
             vector<state> L(num_states,0);
-            for(state k = 0; k < num_states; k++){ // 0 1 2 3 4
+            for(state k = 0; k < num_states; k++){
                 state* row2 = transition_table[k];
-                // cout << pi_input.at(len_str/NUM_THR - 1) << " ";
-                // cout << row[char_to_int(pi_input.at(len_str/NUM_THR - 1))] << " ";
                 if (i && (row2[char_to_int(input_str[start_position-1])] != -1)) 
                     L[k] = row2[char_to_int(input_str[start_position-1])];
             }
-            // if(omp_get_thread_num() == 3)
-            // for(const auto dat: S) cout << dat << " ";
-            // cout << "\n";
-            // if(omp_get_thread_num() == 3)
-            // for(const auto dat: L) cout << dat << " ";
-            // cout << "\n";
-
             vector<state> R;
 
             sort(S.begin(), S.end());
             sort(L.begin(), L.end());
             set_intersection(S.begin(), S.end(),L.begin(), L.end(),inserter(R, R.begin()));
-
-            // cout << "\n";
-            if(omp_get_thread_num() == 3)
-                for(const auto dat: R) cout << dat << " ";
-
-
             
             for (int r : R){
                 vector<state> Rr;
@@ -131,19 +122,21 @@ bool rem_parser() {
         }       
     }  /* end of parallel section */
 
-    cout << "\n";
-    cout << I.size();
-    int thread_id = 0;
-    for(const auto thread: I){
-        
-        cout << "Thread: " << thread_id++ << "\n";
-        for(const auto initial_states: thread){
-            for(const auto state: initial_states){
-                cout << state << " ";
-            }
-            cout << "\n";
-        }
+
+    // reduction I
+    for (size_t i = 0; i < NUM_THR; ++i) {
+        I[i] = eliminateDuplicate(I[i]);
     }
+
+    // lecture I
+    // int thread_id = 0;
+    // for(const auto thread: I){
+    //     cout << "Thread: " << thread_id++ << "\n";
+    //     for(const auto initial_states: thread){
+    //         for(const auto state: initial_states) cout << state << " ";
+    //         cout << "\n";
+    //     }
+    // }
 
 
     bool f_state = 0;
@@ -159,7 +152,6 @@ bool rem_parser() {
         return 0;
 
     int cur = I.front().front().back();
-    cout << cur << endl;
     
     for (int i = 1; i < NUM_THR; i++)
     {
@@ -189,26 +181,20 @@ bool rem_parser() {
 
 
 bool match_re() {
-    // state final_state = rem_parser(0);
-    // for(const auto state: final_states) if(final_state == state) return true;
     return rem_parser();
-    // if (find(final_states.begin(), final_states.end(), final_state) != final_states.end()) {
-    //     return true;
-    // } else {
-    //     return false;
-    // }
 }
 
-// #define N 10
+
 int main(int argc, char *argv[]) {
     define_automata();
-    // read_table();
+    // dfapaper.txt is from the paper
+    // 
     cin >> input_str;
 
     if (match_re()) {
-        cout << "YES" << endl;
+        cout << "YES, input match" << endl;
     } else {
-        cout << "NO" << endl;
+        cout << "NO, input does not match" << endl;
     }
 
     return 0;
