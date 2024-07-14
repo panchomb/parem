@@ -55,9 +55,9 @@ void read_table(){
 
 }
 
-vector<vector<state>> eliminateDuplicate(const vector<vector<state>>& matriz) {
-    set<vector<state>> filasUnicas;
-    vector<vector<state>> resultado;
+vector<vector<state> > eliminateDuplicate(const vector<vector<state> >& matriz) {
+    set<vector<state> > filasUnicas;
+    vector<vector<state> > resultado;
 
     for (const auto& fila : matriz) {
         vector<state> filaSinPrimerValor(fila.begin() + 1, fila.end());
@@ -79,7 +79,7 @@ bool rem_parser() {
     vector<state>::iterator ip;
     size_t len_str = input_str.size();
     // Initialize final result
-    vector<vector<vector<state>>> I(NUM_THR);
+    vector<vector<vector<state> > > I(NUM_THR);
     #pragma omp parallel default(shared) private(i, j, k, pi_input, start_position, ip)
     {
 
@@ -133,7 +133,7 @@ bool rem_parser() {
     for(const auto thread: I){
         cout << "Thread: " << thread_id++ << "\n";
         for(const auto initial_states: thread){
-            for(const auto state: initial_states) cout << state << " ";
+            for (const auto state: initial_states) cout << state << " ";
             cout << "\n";
         }
     }
