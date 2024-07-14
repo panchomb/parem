@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <omp.h>
+#include <algorithm>
 
 using namespace std;
 
@@ -63,11 +64,11 @@ state rem_parser(state q) {
     int start_position;
     string pi_input;
     omp_set_num_threads(NUM_THR);
-    
-    // Initialize final result
-    // vector<vector<string>> I = {};
+    vector<state>::iterator ip;
     size_t len_str = input_str.size();
-    #pragma omp parallel default(shared) private(i, j, k, pi_input, start_position)
+    // Initialize final result
+    vector<vector<state>> I( NUM_THR , vector<state> (len_str/NUM_THR));
+    #pragma omp parallel default(shared) private(i, j, k, pi_input, start_position, ip)
     {
         //#pragma omp for schedule(dynamic) nowait
         //#pragma omp for schedule(static,chunk) private(i) nowait
@@ -92,21 +93,46 @@ state rem_parser(state q) {
                 state* row2 = transition_table[k];
                 // cout << pi_input.at(len_str/NUM_THR - 1) << " ";
                 // cout << row[char_to_int(pi_input.at(len_str/NUM_THR - 1))] << " ";
-                if (row2[char_to_int(pi_input.at(len_str/NUM_THR -1))] != -1) L[k] = k;
+                if (row2[char_to_int(pi_input.at(len_str/NUM_THR -1))] != -1) L[k] = row2[char_to_int(pi_input.at(len_str/NUM_THR -1))];
+            }
+            if(omp_get_thread_num() == 0)
+            for(const auto dat: S) cout << dat << " ";
+            // cout << "\n";
+            if(omp_get_thread_num() == 0)
+            for(const auto dat: L) cout << dat << " ";
+            // cout << "\n";
+
+            vector<state> R;
+
+
+            set_intersection(S.begin(), S.end(),L.begin(), L.end(),inserter(R, R.begin()));
+
+            cout << "\n";
+            if(omp_get_thread_num() == 2)
+                for(const auto dat: R) cout << dat << " ";
+
+    
+            
+            for (int r : R){
+                vector<state> Rr(pi_input.size(),0);
+                for (const auto charPI: pi_input){
+                    // state* row = transition_table[r];
+                    Rr[i] = r;
+                }
+                I[i] = (Rr);
             }
 
-            // for(const auto dat: S) cout << dat << " ";
-            // cout << "\n";
-            // for(const auto dat: L) cout << dat << " ";
-            // cout << "\n";
 
-            
-        }
-        
+        }       
     }  /* end of parallel section */
 
-
-
+    cout << "\n";
+    for(int i = 0; i < NUM_THR; i++){
+        for(int j = 0; j < len_str/NUM_THR; j++){
+            cout << I[i][j] << " ";
+        }
+        cout << endl;
+    }
 
     for (int i = 0; i < input_str.size(); i++) {
         if (q == -1) {
