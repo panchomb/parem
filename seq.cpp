@@ -129,14 +129,14 @@ bool rem_parser() {
     }
 
     // lecture I
-    // int thread_id = 0;
-    // for(const auto thread: I){
-    //     cout << "Thread: " << thread_id++ << "\n";
-    //     for(const auto initial_states: thread){
-    //         for(const auto state: initial_states) cout << state << " ";
-    //         cout << "\n";
-    //     }
-    // }
+    int thread_id = 0;
+    for(const auto thread: I){
+        cout << "Thread: " << thread_id++ << "\n";
+        for(const auto initial_states: thread){
+            for(const auto state: initial_states) cout << state << " ";
+            cout << "\n";
+        }
+    }
 
 
     bool f_state = 0;
