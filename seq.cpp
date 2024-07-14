@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+#include <set>
 #include <math.h>
 #include <omp.h>
 #include <algorithm>
@@ -21,7 +22,7 @@ string input_str;
 
 void define_automata() {
     state final_state;
-    freopen("dfapaper.txt","r",stdin);
+    freopen("afd.txt","r",stdin);
     cin >> num_states >> alphabet_size >> num_final_states;
 
     transition_table = new state*[num_states];
@@ -58,7 +59,21 @@ void read_table(){
 
 }
 
-state rem_parser(state q) {
+vector<vector<state>> eliminateDuplicate(const vector<vector<state>>& matriz) {
+    set<vector<state>> filasUnicas;
+    vector<vector<state>> resultado;
+    
+    for (const auto& fila : matriz) {
+        vector<state> filaSinPrimerValor(fila.begin() + 1, fila.end());
+        if (filasUnicas.insert(filaSinPrimerValor).second) {
+            resultado.push_back(fila);
+        }
+    }
+    
+    return resultado;
+}
+
+bool rem_parser() {
     int i = 0;
     state j;
     state k;
@@ -79,7 +94,7 @@ state rem_parser(state q) {
             start_position = i*(len_str/NUM_THR);
             end_position = start_position + (len_str/NUM_THR);
             pi_input = input_str.substr(start_position, (len_str/NUM_THR));
-            cout << pi_input << "  ";
+            // cout << pi_input << "  ";
             // cout << start_position << "  "<<omp_get_thread_num() << "\n";
             vector<state> S(num_states,-1);
             for(state j = 0; j < num_states; j++){ // 0 1 2 3 4
@@ -109,17 +124,11 @@ state rem_parser(state q) {
             sort(S.begin(), S.end());
             sort(L.begin(), L.end());
             set_intersection(S.begin(), S.end(),L.begin(), L.end(),inserter(R, R.begin()));
-
-            // cout << "\n";
-            if(omp_get_thread_num() == 3)
-                for(const auto dat: R) cout << dat << " ";
-
-
             
             for (int r : R){
                 vector<state> Rr;
                 for (const auto charPI: pi_input){
-                    state* row = transition_table[r];
+                    // state* row = transition_table[r];
                     Rr.push_back(r);
                     r = transition_table[r][char_to_int(charPI)];
                 }
@@ -132,7 +141,14 @@ state rem_parser(state q) {
     }  /* end of parallel section */
 
     cout << "\n";
-    cout << I.size();
+    // cout << I.size();
+
+    // reduction I
+    for (size_t i = 0; i < NUM_THR; ++i) {
+        I[i] = eliminateDuplicate(I[i]);
+    }
+
+    // read matrix
     int thread_id = 0;
     for(const auto thread: I){
         
@@ -144,33 +160,56 @@ state rem_parser(state q) {
             cout << "\n";
         }
     }
-    // for(int i = 0; i < NUM_THR; i++){
-    //     for(int j = 0; j < len_str/NUM_THR; j++){
-    //         cout << I[i][j] << " ";
+    //cant parallelize
+    if (len_str >= NUM_THR) return false;
+
+    // bool f_state = 0;
+    // for (auto Rr : I.back())
+    // {
+    //     if (find(final_states.begin(), final_states.end(), Rr.back()) != final_states.end())
+    //     {
+    //         f_state = 1;
+    //         break;
     //     }
-    //     cout << endl;
     // }
+    // if (!f_state)
+    //     return 0;
 
-    for (int i = 0; i < input_str.size(); i++) {
-        if (q == -1) {
-            printf("INVALID STATE\n");
-            return q;
+
+
+
+    int cur = I.front().front().back();
+    for (int i = 1; i < NUM_THR; i++)
+    {   
+        int start_position, end_position;
+        start_position = i*(len_str/NUM_THR);
+        end_position = start_position + (len_str/NUM_THR);
+        bool f_step = 0;
+
+        if (I[i].empty())
+            return 0;
+
+        for (auto Rr : I[i])
+        {
+            if (cur == Rr.front() && Rr.size() == end_position - start_position + 1)
+            {
+                f_step = 1;
+                cur = Rr.back();
+                break;
+            }
         }
-
-        char c = input_str[i];
-        // printf("CURRENT STATE: %ld, next char: %c\n", q, c);
-        q = transition(q, c);
+        if (!f_step)
+            return false;
     }
-    printf("FINAL STATE: %ld\n", q);
 
-    return q;
+    return true;
 }
 
 
 bool match_re() {
-    state final_state = rem_parser(0);
-    for(const auto state: final_states) if(final_state == state) return true;
-    return false;
+    // state final_state = rem_parser(0);
+    // for(const auto state: final_states) if(final_state == state) return true;
+    return rem_parser();
     // if (find(final_states.begin(), final_states.end(), final_state) != final_states.end()) {
     //     return true;
     // } else {
