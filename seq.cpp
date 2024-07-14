@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+#include <math.h>
 #include <omp.h>
 #include <algorithm>
 
@@ -67,16 +68,16 @@ state rem_parser(state q) {
     vector<state>::iterator ip;
     size_t len_str = input_str.size();
     // Initialize final result
-    vector<vector<state>> I( NUM_THR , vector<state> (len_str/NUM_THR));
+    vector<vector<vector<state>>> I(NUM_THR);
     #pragma omp parallel default(shared) private(i, j, k, pi_input, start_position, ip)
     {
         //#pragma omp for schedule(dynamic) nowait
         //#pragma omp for schedule(static,chunk) private(i) nowait
         #pragma omp for schedule(static) nowait
         for(int i = 0; i < NUM_THR; i++){
-            int start_position;
+            int start_position, end_position;
             start_position = i*(len_str/NUM_THR);
-            
+            end_position = start_position + (len_str/NUM_THR);
             pi_input = input_str.substr(start_position, (len_str/NUM_THR));
             cout << pi_input << "  ";
             // cout << start_position << "  "<<omp_get_thread_num() << "\n";
@@ -88,38 +89,42 @@ state rem_parser(state q) {
                 if (row[char_to_int(pi_input.at(0))] != -1) S[j] = j;
             }
 
-            vector<state> L(num_states,-1);
+            vector<state> L(num_states,0);
             for(state k = 0; k < num_states; k++){ // 0 1 2 3 4
                 state* row2 = transition_table[k];
                 // cout << pi_input.at(len_str/NUM_THR - 1) << " ";
                 // cout << row[char_to_int(pi_input.at(len_str/NUM_THR - 1))] << " ";
-                if (row2[char_to_int(pi_input.at(len_str/NUM_THR -1))] != -1) L[k] = row2[char_to_int(pi_input.at(len_str/NUM_THR -1))];
+                if (i && (row2[char_to_int(input_str[start_position-1])] != -1)) 
+                    L[k] = row2[char_to_int(input_str[start_position-1])];
             }
-            if(omp_get_thread_num() == 0)
-            for(const auto dat: S) cout << dat << " ";
+            // if(omp_get_thread_num() == 3)
+            // for(const auto dat: S) cout << dat << " ";
             // cout << "\n";
-            if(omp_get_thread_num() == 0)
-            for(const auto dat: L) cout << dat << " ";
+            // if(omp_get_thread_num() == 3)
+            // for(const auto dat: L) cout << dat << " ";
             // cout << "\n";
 
             vector<state> R;
 
-
+            sort(S.begin(), S.end());
+            sort(L.begin(), L.end());
             set_intersection(S.begin(), S.end(),L.begin(), L.end(),inserter(R, R.begin()));
 
-            cout << "\n";
-            if(omp_get_thread_num() == 2)
+            // cout << "\n";
+            if(omp_get_thread_num() == 3)
                 for(const auto dat: R) cout << dat << " ";
 
-    
+
             
             for (int r : R){
-                vector<state> Rr(pi_input.size(),0);
+                vector<state> Rr;
                 for (const auto charPI: pi_input){
-                    // state* row = transition_table[r];
-                    Rr[i] = r;
+                    state* row = transition_table[r];
+                    Rr.push_back(r);
+                    r = transition_table[r][char_to_int(charPI)];
                 }
-                I[i] = (Rr);
+                Rr.push_back(r);
+                I[i].push_back(Rr);
             }
 
 
@@ -127,12 +132,24 @@ state rem_parser(state q) {
     }  /* end of parallel section */
 
     cout << "\n";
-    for(int i = 0; i < NUM_THR; i++){
-        for(int j = 0; j < len_str/NUM_THR; j++){
-            cout << I[i][j] << " ";
+    cout << I.size();
+    int thread_id = 0;
+    for(const auto thread: I){
+        
+        cout << "Thread: " << thread_id++ << "\n";
+        for(const auto initial_states: thread){
+            for(const auto state: initial_states){
+                cout << state << " ";
+            }
+            cout << "\n";
         }
-        cout << endl;
     }
+    // for(int i = 0; i < NUM_THR; i++){
+    //     for(int j = 0; j < len_str/NUM_THR; j++){
+    //         cout << I[i][j] << " ";
+    //     }
+    //     cout << endl;
+    // }
 
     for (int i = 0; i < input_str.size(); i++) {
         if (q == -1) {
