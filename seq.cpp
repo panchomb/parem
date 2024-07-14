@@ -22,7 +22,7 @@ string input_str;
 
 void define_automata() {
     state final_state;
-    freopen("dfapaper.txt","r",stdin);
+    freopen("afdinternet.txt","r",stdin);
     cin >> num_states >> alphabet_size >> num_final_states;
 
     transition_table = new state*[num_states];
@@ -164,19 +164,22 @@ bool rem_parser() {
         if (I[i].empty())
             return 0;
 
-        for (auto Rr : I[i]) 
+        for (auto Rr : I[i]) {
             // verify if rr size is partition_size and if it continues the matching
             if (cur == Rr.front() && Rr.size() == end_position - start_position + 1){
-                flag = 1;
+                flag = 1; // continue matching
                 cur = Rr.back();
                 break;
             }
+        }
 
-        if (!flag)
+        if (!flag) // if there is no matching left
             return false;
     }
-
-    return true;
+    if (find(final_states.begin(), final_states.end(), cur) != final_states.end())
+        return true;
+    else
+        return false;
 }
 
 
