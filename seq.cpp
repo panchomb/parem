@@ -18,11 +18,11 @@ state **transition_table;
 vector<state> final_states;
 string input_str;
 
-#define NUM_THR 4
+#define NUM_THR 1
 
 void define_automata() {
     state final_state;
-    freopen("afdinternet.txt","r",stdin);
+    freopen("dfapaper.txt","r",stdin);
     cin >> num_states >> alphabet_size >> num_final_states;
 
     transition_table = new state*[num_states];
@@ -125,18 +125,18 @@ bool rem_parser() {
 
     // reduction I
     for (size_t i = 0; i < NUM_THR; ++i) {
-        I[i] = eliminateDuplicate(I[i]);
+        //I[i] = eliminateDuplicate(I[i]);
     }
 
     // lecture I
     int thread_id = 0;
-    for(const auto thread: I){
-        cout << "Thread: " << thread_id++ << "\n";
-        for(const auto initial_states: thread){
-            for (const auto state: initial_states) cout << state << " ";
-            cout << "\n";
-        }
-    }
+    // for(const auto thread: I){
+    //     cout << "Thread: " << thread_id++ << "\n";
+    //     for(const auto initial_states: thread){
+    //         for (const auto state: initial_states) cout << state << " ";
+    //         cout << "\n";
+    //     }
+    // }
 
 
     bool f_state = 0;
@@ -182,23 +182,68 @@ bool rem_parser() {
         return false;
 }
 
+state transition_seq(state q, char c) {
+    state* row = transition_table[q];
+    return row[char_to_int(c)];
+}
+
+state rem_parser_seq(state q) {
+    for (int i = 0; i < input_str.size(); i++) {
+        if (q == -1) {
+            return q;
+        }
+
+        char c = input_str[i];
+        q = transition_seq(q, c);
+    }
+
+    return q;
+}
+
 
 bool match_re() {
     return rem_parser();
 }
 
+bool match_re_seq() {
+    state final_state = rem_parser_seq(0);
+    for(const auto state: final_states) if(final_state == state) return true;
+    return false;
+}
+
 
 int main(int argc, char *argv[]) {
+    double itime, ftime, exec_time;
+    
     define_automata();
     // dfapaper.txt is from the paper
     // 
     cin >> input_str;
+    string og_str = input_str;
+    for (int i = 10; i <= 20; i++) {
+        input_str = og_str;
+        int len = pow(2, i);
+        while (input_str.size() < len) {
+            input_str += input_str.substr(0, len - input_str.size());
+        }
+        for (int j = 0; j < 100; j++) {
+            itime = omp_get_wtime();
+            if (NUM_THR == 1)
+                bool match = match_re_seq();
+            else
+                bool match = match_re();
+            ftime = omp_get_wtime();
 
-    if (match_re()) {
-        cout << "YES, input match" << endl;
-    } else {
-        cout << "NO, input does not match" << endl;
+            exec_time = ftime - itime;
+            printf("%d %d %f\n", NUM_THR, i, exec_time);
+        }
     }
+
+    // if (match) {
+    //     cout << "YES, input match" << endl;
+    // } else {
+    //     cout << "NO, input does not match" << endl;
+    // }
 
     return 0;
 }
