@@ -165,6 +165,7 @@ bool rem_parser() {
             return 0;
 
         for (auto Rr : I[i]) 
+            // verify if rr size is partition_size and if it continues the matching
             if (cur == Rr.front() && Rr.size() == end_position - start_position + 1){
                 flag = 1;
                 cur = Rr.back();
