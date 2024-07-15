@@ -18,7 +18,7 @@ state **transition_table;
 vector<state> final_states;
 string input_str;
 
-#define NUM_THR 1
+#define num_thr 16
 
 void define_automata() {
     state final_state;
@@ -55,81 +55,65 @@ void read_table(){
 
 }
 
-vector<vector<state> > eliminateDuplicate(const vector<vector<state> >& matriz) {
-    set<vector<state> > filasUnicas;
-    vector<vector<state> > resultado;
-
-    for (const auto& fila : matriz) {
-        vector<state> filaSinPrimerValor(fila.begin() + 1, fila.end());
-        if (filasUnicas.insert(filaSinPrimerValor).second) {
-            resultado.push_back(fila);
-        }
-    }
-
-    return resultado;
-}
-
-bool rem_parser() {
-    int i = 0;
+bool rem_parser(int nth) {
+    int i;
     state j;
     state k;
     int start_position;
     string pi_input;
-    omp_set_num_threads(NUM_THR);
+    omp_set_num_threads(nth);
     vector<state>::iterator ip;
     size_t len_str = input_str.size();
+    size_t chunk_size = len_str/nth;
     // Initialize final result
-    vector<vector<vector<state> > > I(NUM_THR);
-    #pragma omp parallel default(shared) private(i, j, k, pi_input, start_position, ip)
+    vector<vector<vector<state> > > I(nth);
+    #pragma omp parallel private(i, j, k, pi_input, start_position, ip)
     {
+        //#pragma omp for schedule(static) nowait
+        int start_position, end_position;
+        i = omp_get_thread_num();
 
-        #pragma omp for schedule(static) nowait
-        for(int i = 0; i < NUM_THR; i++){
-            int start_position, end_position;
-            start_position = i*(len_str/NUM_THR);
-            end_position = start_position + (len_str/NUM_THR);
-            pi_input = input_str.substr(start_position, (len_str/NUM_THR));
-            vector<state> S(num_states,-1);
-            for(state j = 0; j < num_states; j++){
-                state* row = transition_table[j];
-                if (row[char_to_int(pi_input.at(0))] != -1) S[j] = j;
-            }
+        
 
-            vector<state> L(num_states,0);
-            for(state k = 0; k < num_states; k++){
-                state* row2 = transition_table[k];
-                if (i && (row2[char_to_int(input_str[start_position-1])] != -1)) 
-                    L[k] = row2[char_to_int(input_str[start_position-1])];
-            }
-            vector<state> R;
+        start_position = i*chunk_size;
+        end_position = start_position + (len_str/nth);
 
-            sort(S.begin(), S.end());
-            sort(L.begin(), L.end());
-            set_intersection(S.begin(), S.end(),L.begin(), L.end(),inserter(R, R.begin()));
-            
-            for (int r : R){
-                vector<state> Rr;
-                for (const auto charPI: pi_input){
-                    state* row = transition_table[r];
-                    Rr.push_back(r);
-                    r = transition_table[r][char_to_int(charPI)];
-                }
+
+        //pi_input = input_str.substr(start_position, (len_str/nth));
+
+        vector<state> S(num_states,-1);
+        for(state j = 0; j < num_states; j++){
+            state* row = transition_table[j];
+            if (row[char_to_int(input_str[start_position])] != -1) S[j] = j;
+        }
+
+        vector<state> L(num_states,0);
+        for(state k = 0; k < num_states; k++){
+            state* row2 = transition_table[k];
+            if (i && (row2[char_to_int(input_str[start_position-1])] != -1)) 
+                L[k] = row2[char_to_int(input_str[start_position-1])];
+        }
+        vector<state> R;
+
+        sort(S.begin(), S.end());
+        sort(L.begin(), L.end());
+        set_intersection(S.begin(), S.end(),L.begin(), L.end(),inserter(R, R.begin()));
+        
+        for (int r : R){
+            vector<state> Rr;
+            for (int k = start_position; k < end_position; k++){
+                //state* row = transition_table[r];
                 Rr.push_back(r);
-                I[i].push_back(Rr);
+                r = transition_table[r][char_to_int(input_str[k])];
             }
+            Rr.push_back(r);
+            I[i].push_back(Rr);
+        }
 
-
-        }       
     }  /* end of parallel section */
 
-
-    // reduction I
-    for (size_t i = 0; i < NUM_THR; ++i) {
-        //I[i] = eliminateDuplicate(I[i]);
-    }
-
     // lecture I
-    int thread_id = 0;
+    // int thread_id = 0;
     // for(const auto thread: I){
     //     cout << "Thread: " << thread_id++ << "\n";
     //     for(const auto initial_states: thread){
@@ -154,11 +138,11 @@ bool rem_parser() {
 
     int cur = I.front().front().back();
     
-    for (int i = 1; i < NUM_THR; i++)
+    for (int i = 1; i < nth; i++)
     {
         int start_position, end_position;
-        start_position = i*(len_str/NUM_THR);
-        end_position = start_position + (len_str/NUM_THR);
+        start_position = i*(len_str/nth);
+        end_position = start_position + (len_str/nth);
         bool flag = 0;
 
         if (I[i].empty())
@@ -201,8 +185,8 @@ state rem_parser_seq(state q) {
 }
 
 
-bool match_re() {
-    return rem_parser();
+bool match_re(int n_threads) {
+    return rem_parser(n_threads);
 }
 
 bool match_re_seq() {
@@ -214,32 +198,37 @@ bool match_re_seq() {
 
 int main(int argc, char *argv[]) {
     double itime, ftime, exec_time;
-    
+    int n_threads = 1;
+
     define_automata();
     // dfapaper.txt is from the paper
     // 
     cin >> input_str;
     string og_str = input_str;
-    for (int i = 10; i <= 20; i++) {
-        input_str = og_str;
-        int len = pow(2, i);
-        while (input_str.size() < len) {
-            input_str += input_str.substr(0, len - input_str.size());
-        }
-        for (int j = 0; j < 100; j++) {
-            itime = omp_get_wtime();
-            if (NUM_THR == 1)
-                bool match = match_re_seq();
-            else
-                bool match = match_re();
-            ftime = omp_get_wtime();
 
-            exec_time = ftime - itime;
-            printf("%d %d %f\n", NUM_THR, i, exec_time);
+    while (n_threads <= 16) {
+        for (int i = 10; i <= 24; i++) {
+            input_str = og_str;
+            int len = pow(2, i);
+            while (input_str.size() < len) {
+                input_str += input_str.substr(0, len - input_str.size());
+            }
+            for (int j = 0; j < 100; j++) {
+                itime = omp_get_wtime();
+                if (num_thr == 0)
+                    bool match = match_re_seq();
+                else
+                    bool match = match_re(n_threads);
+                ftime = omp_get_wtime();
+
+                exec_time = ftime - itime;
+                printf("%d %d %f\n", n_threads, i, exec_time);
+            }
         }
+        n_threads *= 2;
     }
 
-    // if (match) {
+    // if (match_re(4)) {
     //     cout << "YES, input match" << endl;
     // } else {
     //     cout << "NO, input does not match" << endl;

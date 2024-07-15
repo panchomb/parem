@@ -34,5 +34,5 @@ def generate_plots(data):
         plt.close()
 
 # Example usage
-data = process_data('times.txt')  # Replace 'output.txt' with the actual file containing the standard output
+data = process_data('output.txt')  # Replace 'output.txt' with the actual file containing the standard output
 generate_plots(data)
