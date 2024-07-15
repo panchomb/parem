@@ -11,7 +11,8 @@ def process_data(file_path):
                 num_threads = int(parts[0])
                 input_length_exp = int(parts[1])
                 exec_time = float(parts[2])
-                data.append((num_threads, input_length_exp, exec_time))
+                if input_length_exp >= 20:
+                    data.append((num_threads, input_length_exp, exec_time))
     return data
 
 # Generate plots
